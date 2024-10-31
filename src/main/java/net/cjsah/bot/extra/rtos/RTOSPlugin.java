@@ -42,6 +42,7 @@ public class RTOSPlugin extends Plugin {
 
     @Command("/bind")
     public static void bindUser(@CommandParam("id") String id, CommandSource source) throws IOException, InterruptedException {
+        if (!RoomId.equals(source.sender().getRoomInfo().getId())) return;
         String str = ConfigPath.read();
         JSONObject config = JsonUtil.deserialize(str, JSONObject.class);
         List<RTOSUser> users = config.getList("users", RTOSUser.class);

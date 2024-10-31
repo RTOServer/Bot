@@ -8,5 +8,5 @@
       "Cjsah"
     ]
   },
-  "main": "net.cjsah.bot.extra.RTOSPlugin"
+  "main": "net.cjsah.bot.extra.rtos.RTOSPlugin"
 }

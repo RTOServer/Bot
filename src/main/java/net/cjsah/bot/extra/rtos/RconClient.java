@@ -136,6 +136,7 @@ public class RconClient {
             res.response = new String(payload, res.charset);
             res.lock.notifyAll();
         }
+        this.locks.remove(id);
     }
 
     private static class Response {
