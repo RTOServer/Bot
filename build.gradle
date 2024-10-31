@@ -2,9 +2,6 @@ plugins {
     id 'java'
 }
 
-group = 'net.cjsah'
-version = '1.0-SNAPSHOT'
-
 repositories {
     mavenCentral()
 }
@@ -16,12 +13,5 @@ repositories {
 }
 
 dependencies {
-    implementation "net.cjsah.bot:HeyBoxBotConsole:1.0"
-
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
-
-test {
-    useJUnitPlatform()
+    implementation "net.cjsah.bot:HeyBoxBotConsole:${core_version}"
 }
