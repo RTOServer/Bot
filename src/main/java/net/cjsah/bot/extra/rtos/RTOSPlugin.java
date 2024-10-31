@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,12 +28,13 @@ public class RTOSPlugin extends Plugin {
     private static final Logger log = LoggerFactory.getLogger("RTOSPlugin");
     private static final FilePaths.AppFile ConfigPath = FilePaths.regFile(FilePaths.CONFIG.resolve("rtos.json"), "{\"host\":\"\",\"port\":25575,\"password\":\"\",\"users\":[]}");
     private static final String RoomId = "3691550761648357376";
+    private static final List<RTOSUser> Users = new ArrayList<>();
 
     @Override
     public void onLoad() {
         ConfigPath.checkAndCreate();
+        RTOSPlugin.readConfig();
         CommandManager.register(RTOSPlugin.class);
-
         EventManager.subscribe(UserJoinEvent.class, it -> {
             if (!RoomId.equals(it.getRoomInfo().getId())) return;
             try {
@@ -41,18 +43,28 @@ public class RTOSPlugin extends Plugin {
                 log.error("Fail to leave user", e);
             }
         });
+    }
 
+    private static JSONObject readConfig() {
+        String str = ConfigPath.read();
+        JSONObject config = JsonUtil.deserialize(str, JSONObject.class);
+        Users.clear();
+        Users.addAll(config.getList("users", RTOSUser.class));
+        return config;
+    }
+
+    private static void saveConfig(JSONObject config) {
+        config.put("users", Users);
+        FileUtil.writeString(JsonUtil.serialize(config), ConfigPath.path().toFile(), StandardCharsets.UTF_8);
     }
 
     @Command("/bind")
     public static void bindUser(@CommandParam("id") String id, @CommandParam("role") String role, CommandSource source) {
         if (!RoomId.equals(source.sender().getRoomInfo().getId()))
             throw BuiltExceptions.DISPATCHER_COMMAND_NO_PERMISSION.create();
-        String str = ConfigPath.read();
-        JSONObject config = JsonUtil.deserialize(str, JSONObject.class);
-        List<RTOSUser> users = config.getList("users", RTOSUser.class);
+        JSONObject config = RTOSPlugin.readConfig();
         long senderId = source.sender().getSenderInfo().getId();
-        if (users.stream().anyMatch(it -> Objects.equals(it.heyId(), senderId))) {
+        if (Users.stream().anyMatch(it -> Objects.equals(it.heyId(), senderId))) {
             throw new CommandException("你已绑定正版账号, 无法再次绑定, 如需解换绑请联系管理员!");
         }
         RoleInfo roleSet = Api.getRoomRoles(RoomId)
@@ -76,25 +88,22 @@ public class RTOSPlugin extends Plugin {
             return;
         }
         Api.userGiveRole((int) senderId, RoomId, roleSet.getId());
-        config.getJSONArray("users").add(user);
-        FileUtil.writeString(JsonUtil.serialize(config), ConfigPath.path().toFile(), StandardCharsets.UTF_8);
+        Users.add(user);
+        RTOSPlugin.saveConfig(config);
         source.sendFeedback("绑定成功!");
     }
 
     private static void userLeave(long heyId) throws IOException, InterruptedException {
-        String str = ConfigPath.read();
-        JSONObject config = JsonUtil.deserialize(str, JSONObject.class);
-        List<RTOSUser> users = config.getList("users", RTOSUser.class);
-        if (users.stream().anyMatch(it -> Objects.equals(it.heyId(), heyId))) {
+        JSONObject config = RTOSPlugin.readConfig();
+        if (Users.stream().anyMatch(it -> Objects.equals(it.heyId(), heyId))) {
             RTOSPlugin.sendCommand(
                     config.getString("host"),
                     config.getIntValue("port"),
                     config.getString("password"),
                     "whitelist remove " + heyId
             );
-            users.removeIf(it -> Objects.equals(it.heyId(), heyId));
-            config.put("users", users);
-            FileUtil.writeString(JsonUtil.serialize(config), ConfigPath.path().toFile(), StandardCharsets.UTF_8);
+            Users.removeIf(it -> Objects.equals(it.heyId(), heyId));
+            RTOSPlugin.saveConfig(config);
         }
     }
 
