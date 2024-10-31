@@ -39,12 +39,8 @@ public class RconClient {
     }
 
     public void close() throws IOException {
-        if (this.client != null) {
-            if (this.client.isConnected()) {
-                throw new IllegalStateException("Already connected");
-            } else if (!this.client.isClosed()) {
-                this.client.close();
-            }
+        if (this.client != null && (this.client.isConnected() || !this.client.isClosed())) {
+            this.client.close();
         }
     }
 
