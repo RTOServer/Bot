@@ -1,0 +1,12 @@
+{
+  "id": "rtos",
+  "name": "RTOS",
+  "description": "RTOS Official Bot",
+  "version": "1.0",
+  "info": {
+    "authors": [
+      "Cjsah"
+    ]
+  },
+  "main": "net.cjsah.bot.extra.RTOSPlugin"
+}
