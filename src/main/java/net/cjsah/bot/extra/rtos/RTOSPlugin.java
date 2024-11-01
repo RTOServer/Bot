@@ -3,6 +3,7 @@ package net.cjsah.bot.extra.rtos;
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSONObject;
 import net.cjsah.bot.FilePaths;
+import net.cjsah.bot.HeartBeatTimer;
 import net.cjsah.bot.api.Api;
 import net.cjsah.bot.command.Command;
 import net.cjsah.bot.command.CommandManager;
@@ -15,6 +16,8 @@ import net.cjsah.bot.exception.BuiltExceptions;
 import net.cjsah.bot.exception.CommandException;
 import net.cjsah.bot.plugin.Plugin;
 import net.cjsah.bot.util.JsonUtil;
+import org.quartz.*;
+import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,13 +26,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public class RTOSPlugin extends Plugin {
     private static final Logger log = LoggerFactory.getLogger("RTOSPlugin");
     private static final FilePaths.AppFile ConfigPath = FilePaths.regFile(FilePaths.CONFIG.resolve("rtos.json"), "{\"address\":\"\",\"token\":\"\",\"users\":[]}");
-    private static final String RoomId = "3691550761648357376";
     private static final List<RTOSUser> Users = new ArrayList<>();
+    public static final String RoomId = "3691550761648357376";
+    public static final String ChannelId = "3703962297047187456";
+
+    private Scheduler scheduler;
 
     @Override
     public void onLoad() {
@@ -44,6 +49,47 @@ public class RTOSPlugin extends Plugin {
                 log.error("Fail to leave user", e);
             }
         });
+        try {
+            SchedulerFactory factory = new StdSchedulerFactory();
+            this.scheduler = factory.getScheduler();
+            this.scheduler.start();
+        } catch (SchedulerException e) {
+            log.error("Fail to create scheduler", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void onStarted() {
+        JobDetail job = JobBuilder
+                .newJob(ReceiveMsgJob.class)
+                .withIdentity("Job", "Msg")
+                .build();
+        Trigger trigger = TriggerBuilder
+                .newTrigger()
+                .withIdentity("Trigger", "Msg")
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInMilliseconds(500).repeatForever())
+                .build();
+        try {
+            this.scheduler.scheduleJob(job, trigger);
+        } catch (SchedulerException e) {
+            log.error("Fail to create schedule job", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void onUnload() {
+        TriggerKey triggerKey = new TriggerKey("Trigger", "Msg");
+        JobKey jobKey = new JobKey("Job", "Msg");
+        try {
+            this.scheduler.pauseTrigger(triggerKey);
+            this.scheduler.unscheduleJob(triggerKey);
+            this.scheduler.deleteJob(jobKey);
+            this.scheduler.shutdown(true);
+        } catch (SchedulerException e) {
+            log.error("Error stopping schedule", e);
+        }
     }
 
     private static JSONObject readConfig() {
@@ -84,11 +130,21 @@ public class RTOSPlugin extends Plugin {
         source.sendFeedback("绑定成功!");
     }
 
+    @Command("/mc <msg>")
+    public static void sendMsg(String msg, CommandSource source) {
+        long senderId = source.sender().getSenderInfo().getId();
+        RTOSUser user = Users.stream()
+                .filter(it -> Objects.equals(it.heyId(), senderId))
+                .findFirst()
+                .orElseThrow(() -> new CommandException("未绑定MC正版账号, 清先使用/bind绑定"));
+        ServerRequest.send(user.mcId(), msg);
+    }
+
     private static void userLeave(long heyId) throws IOException, InterruptedException {
         JSONObject config = RTOSPlugin.readConfig();
-        Optional<RTOSUser> user = Users.stream().filter(it -> Objects.equals(it.heyId(), heyId)).findFirst();
-        if (user.isPresent()) {
-            ServerRequest.command("whitelist remove " + user.get().mcId());
+        RTOSUser user = Users.stream().filter(it -> Objects.equals(it.heyId(), heyId)).findFirst().orElse(null);
+        if (user != null) {
+            ServerRequest.command("whitelist remove " + user.mcId());
             Users.removeIf(it -> Objects.equals(it.heyId(), heyId));
             RTOSPlugin.saveConfig(config);
         }
