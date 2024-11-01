@@ -48,7 +48,7 @@ public class ServerRequest {
             if (json.getIntValue("code") != 0) {
                 throw BuiltExceptions.REQUEST_FAILED.create(json.getString("msg"));
             }
-            return json;
+            return json.getJSONObject("data");
         }
     }
 

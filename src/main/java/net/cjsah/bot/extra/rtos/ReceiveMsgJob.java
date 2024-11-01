@@ -16,7 +16,8 @@ public class ReceiveMsgJob implements Job {
         List<PlayerMsg> msgs = ServerRequest.receive();
         if (msgs.isEmpty()) return;
         for (PlayerMsg msg : msgs) {
-            Api.sendMsg(new MsgBuilder(RoomId, ChannelId, msg.msg()));
+            String message = "&lt;%s&gt; %s".formatted(msg.player(), msg.msg());
+            Api.sendMsg(new MsgBuilder(RoomId, ChannelId, message));
         }
     }
 }
