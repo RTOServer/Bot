@@ -13,7 +13,6 @@ repositories {
 }
 
 dependencies {
-    implementation("net.cjsah.bot:HeyBoxBotConsole:${core_version}") {
-        exclude group: 'net.cjsah.bot', module: 'api'
-    }
+    implementation "net.cjsah.bot:HeyBoxBotConsole:${core_version}"
+
 }

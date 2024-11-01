@@ -3,7 +3,6 @@ package net.cjsah.bot.extra.rtos;
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson2.JSONObject;
 import net.cjsah.bot.FilePaths;
-import net.cjsah.bot.HeartBeatTimer;
 import net.cjsah.bot.api.Api;
 import net.cjsah.bot.command.Command;
 import net.cjsah.bot.command.CommandManager;
@@ -11,6 +10,7 @@ import net.cjsah.bot.command.CommandParam;
 import net.cjsah.bot.command.source.CommandSource;
 import net.cjsah.bot.data.RoleInfo;
 import net.cjsah.bot.event.EventManager;
+import net.cjsah.bot.event.events.CommandEvent;
 import net.cjsah.bot.event.events.UserJoinEvent;
 import net.cjsah.bot.exception.BuiltExceptions;
 import net.cjsah.bot.exception.CommandException;
@@ -132,12 +132,14 @@ public class RTOSPlugin extends Plugin {
 
     @Command("/mc <msg>")
     public static void sendMsg(String msg, CommandSource source) {
-        long senderId = source.sender().getSenderInfo().getId();
+        CommandEvent sender = source.sender();
+        long senderId = sender.getSenderInfo().getId();
         RTOSUser user = Users.stream()
                 .filter(it -> Objects.equals(it.heyId(), senderId))
                 .findFirst()
                 .orElseThrow(() -> new CommandException("未绑定MC正版账号, 清先使用/bind绑定"));
         ServerRequest.send(user.mcId(), msg);
+        Api.msgReplyEmoji(sender.getRoomInfo().getId(), sender.getChannelInfo().getId(), sender.getMsgId(), "[1_\uD83D\uDC4C]", true);
     }
 
     private static void userLeave(long heyId) throws IOException, InterruptedException {
