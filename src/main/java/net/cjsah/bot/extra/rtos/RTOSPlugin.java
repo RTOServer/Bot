@@ -23,10 +23,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class RTOSPlugin extends Plugin {
     private static final Logger log = LoggerFactory.getLogger("RTOSPlugin");
-    private static final FilePaths.AppFile ConfigPath = FilePaths.regFile(FilePaths.CONFIG.resolve("rtos.json"), "{\"host\":\"\",\"port\":25575,\"password\":\"\",\"users\":[]}");
+    private static final FilePaths.AppFile ConfigPath = FilePaths.regFile(FilePaths.CONFIG.resolve("rtos.json"), "{\"address\":\"\",\"token\":\"\",\"users\":[]}");
     private static final String RoomId = "3691550761648357376";
     private static final List<RTOSUser> Users = new ArrayList<>();
 
@@ -48,6 +49,7 @@ public class RTOSPlugin extends Plugin {
     private static JSONObject readConfig() {
         String str = ConfigPath.read();
         JSONObject config = JsonUtil.deserialize(str, JSONObject.class);
+        ServerRequest.update(config);
         Users.clear();
         Users.addAll(config.getList("users", RTOSUser.class));
         return config;
@@ -75,18 +77,7 @@ public class RTOSPlugin extends Plugin {
             throw new CommandException("身份组不存在");
         }
         RTOSUser user = new RTOSUser(senderId, id);
-        try {
-            RTOSPlugin.sendCommand(
-                    config.getString("host"),
-                    config.getIntValue("port"),
-                    config.getString("password"),
-                    "whitelist add " + id
-            );
-        } catch (IOException | InterruptedException e) {
-            log.error("Error", e);
-            source.sendFeedback("绑定失败: " + e.getMessage());
-            return;
-        }
+        ServerRequest.command("whitelist add " + id);
         Api.userGiveRole((int) senderId, RoomId, roleSet.getId());
         Users.add(user);
         RTOSPlugin.saveConfig(config);
@@ -95,26 +86,11 @@ public class RTOSPlugin extends Plugin {
 
     private static void userLeave(long heyId) throws IOException, InterruptedException {
         JSONObject config = RTOSPlugin.readConfig();
-        if (Users.stream().anyMatch(it -> Objects.equals(it.heyId(), heyId))) {
-            RTOSPlugin.sendCommand(
-                    config.getString("host"),
-                    config.getIntValue("port"),
-                    config.getString("password"),
-                    "whitelist remove " + heyId
-            );
+        Optional<RTOSUser> user = Users.stream().filter(it -> Objects.equals(it.heyId(), heyId)).findFirst();
+        if (user.isPresent()) {
+            ServerRequest.command("whitelist remove " + user.get().mcId());
             Users.removeIf(it -> Objects.equals(it.heyId(), heyId));
             RTOSPlugin.saveConfig(config);
         }
-    }
-
-    private static void sendCommand(String host, int port, String password, String command) throws IOException, InterruptedException {
-        RconClient client = new RconClient();
-        log.info("正在连接到服务器...");
-        client.connect(host, port, password);
-        log.info("执行命令: {}", command);
-        String response = client.command(command);
-        log.info("服务器返回: {}", response);
-        log.info("断开连接.");
-        client.shutdown();
     }
 }
