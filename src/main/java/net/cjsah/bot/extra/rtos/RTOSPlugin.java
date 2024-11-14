@@ -60,6 +60,14 @@ public class RTOSPlugin extends Plugin {
             String roomId = event.getRoomInfo().getId();
             String channelId = event.getChannelInfo().getId();
             if (!RoomId.equals(roomId) || !ChannelId.equals(channelId)) return;
+            RTOSUser user = Users.stream()
+                    .filter(it -> Objects.equals(it.heyId(), senderId))
+                    .findFirst()
+                    .orElse(null);
+            if (user == null) {
+                Api.updateMsg(event.getMsgId(), new MsgBuilder(roomId, channelId, "未绑定MC正版账号, 清先使用/bind绑定"));
+                return;
+            }
             if (RTOSRole.contains(event.getSenderInfo().getRoles())) {
                 Api.updateMsg(event.getMsgId(), new MsgBuilder(roomId, channelId, "你已拥有身份组, 无需绑定"));
                 return;
