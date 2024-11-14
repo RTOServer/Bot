@@ -81,6 +81,7 @@ public class RTOSPlugin extends Plugin {
                 return;
             }
             Api.userGiveRole((int) senderId, RoomId, roleSet.getId());
+//            ServerRequest.command("team ... " + user.mcId()); // TODO 给team, 但我不知道team名分别是啥
             Api.updateMsg(event.getMsgId(), new MsgBuilder(roomId, channelId, "绑定成功!"));
         });
         try {
