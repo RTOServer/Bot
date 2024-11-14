@@ -2,7 +2,7 @@
   "id": "rtos",
   "name": "RTOS",
   "description": "RTOS Official Bot",
-  "version": "1.0",
+  "version": "${version}",
   "info": {
     "authors": [
       "Cjsah"

@@ -14,5 +14,10 @@ repositories {
 
 dependencies {
     implementation "net.cjsah.bot:HeyBoxBotConsole:${core_version}"
+}
 
+processResources {
+    filesMatching("plugin.json") {
+        expand "version": project.version
+    }
 }
